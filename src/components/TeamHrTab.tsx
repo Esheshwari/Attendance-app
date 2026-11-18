@@ -1,0 +1,461 @@
+import React, { useMemo, useState } from 'react';
+import {
+  CalendarOff,
+  CheckCircle2,
+  Clock,
+  Compass,
+  Download,
+  ExternalLink,
+  Mail,
+  Map as MapIcon,
+  Phone,
+  Search,
+  Users,
+} from 'lucide-react';
+import type { AttendanceLog, LiveEmployeeStatus, TeamOverviewData } from '../types';
+import { exportAttendanceCsv } from '../utils/csv';
+import { buildGoogleMapsUrl } from '../utils/gps';
+import { renderPlaceIcon } from './DashboardTab';
+import { LocationMapModal } from './LocationMapModal';
+import { LocationTraceMap, type MapMarkerPoint } from './LocationTraceMap';
+
+interface TeamHrTabProps {
+  data: TeamOverviewData;
+}
+
+type StatusFilter = 'all' | LiveEmployeeStatus;
+
+export function TeamHrTab({ data }: TeamHrTabProps) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [geoQuery, setGeoQuery] = useState('');
+  const [tracedShift, setTracedShift] = useState<{
+    name: string;
+    log: AttendanceLog;
+  } | null>(null);
+
+  const roster = useMemo(() => {
+    return data.employees.map((emp) => {
+      const email = emp.email.toLowerCase();
+      const empLogs = data.attendance.filter((a) => a.employeeEmail.toLowerCase() === email);
+      const empLeaves = data.leaves.filter((l) => l.employeeEmail.toLowerCase() === email);
+
+      const activeShift = empLogs.find((a) => !a.punchOutAt) || null;
+      const latestShift = empLogs[0] || null;
+
+      const isOnLeaveToday = empLeaves.some(
+        (lv) => lv.startDate <= todayIso && lv.endDate >= todayIso
+      );
+
+      let status: LiveEmployeeStatus = 'Checked Out';
+      if (activeShift) {
+        status = 'On Duty';
+      } else if (isOnLeaveToday) {
+        status = 'On Leave';
+      }
+
+      const uniqueDaysWorked = new Set(
+        empLogs.map((log) => new Date(log.punchInAt).toISOString().slice(0, 10))
+      ).size;
+
+      const leavesTaken = empLeaves.reduce((sum, lv) => sum + lv.daysCount, 0);
+
+      const latestLocation =
+        activeShift?.punchInLocation ||
+        latestShift?.punchOutLocation ||
+        latestShift?.punchInLocation ||
+        null;
+
+      const latestLocationLabel = activeShift
+        ? 'Active Check-In'
+        : latestShift?.punchOutLocation
+        ? 'Last Check-Out'
+        : 'Last Check-In';
+
+      const latestTimestamp = activeShift
+        ? activeShift.punchInAt
+        : latestShift?.punchOutAt || latestShift?.punchInAt || null;
+
+      return {
+        emp,
+        status,
+        workMode: activeShift?.workMode || latestShift?.workMode || null,
+        uniqueDaysWorked,
+        leavesTaken,
+        latestShift: activeShift || latestShift,
+        latestLocation,
+        latestLocationLabel,
+        latestTimestamp,
+      };
+    });
+  }, [data, todayIso]);
+
+  const activeCities = useMemo(() => {
+    const cityCounts = new Map<string, number>();
+    for (const item of roster) {
+      const city =
+        item.latestLocation?.city ||
+        item.latestLocation?.address.split(',').slice(-2, -1)[0]?.trim();
+      if (city) {
+        cityCounts.set(city, (cityCounts.get(city) || 0) + 1);
+      }
+    }
+    return Array.from(cityCounts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [roster]);
+
+  const filteredRoster = useMemo(() => {
+    const q = geoQuery.trim().toLowerCase();
+    return roster.filter((item) => {
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (!q) return true;
+      const haystack = [
+        item.emp.fullName,
+        item.emp.employeeId,
+        item.emp.email,
+        item.emp.mobileNumber,
+        item.emp.department,
+        item.latestLocation?.city || '',
+        item.latestLocation?.placeCategory || '',
+        item.latestLocation?.address || '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [roster, statusFilter, geoQuery]);
+
+  const mapMarkers: MapMarkerPoint[] = useMemo(() => {
+    return filteredRoster
+      .filter((item) => Boolean(item.latestLocation))
+      .map((item) => {
+        const loc = item.latestLocation!;
+        return {
+          id: item.emp.id,
+          lat: loc.lat,
+          lng: loc.lng,
+          title: `${item.emp.fullName} (${item.emp.employeeId})`,
+          city: loc.city,
+          placeCategory: loc.placeCategory,
+          subtitle: loc.address,
+          color:
+            item.status === 'On Duty'
+              ? 'emerald'
+              : item.status === 'On Leave'
+              ? 'amber'
+              : 'slate',
+          mapsUrl: buildGoogleMapsUrl(loc.lat, loc.lng),
+        };
+      });
+  }, [filteredRoster]);
+
+  const onDutyCount = roster.filter((r) => r.status === 'On Duty').length;
+  const onLeaveCount = roster.filter((r) => r.status === 'On Leave').length;
+
+  return (
+    <div className="space-y-4">
+      {/* HR Summary & Export Action */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Team & HR Geography Monitor</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live workforce status, exact city, shop/home trace & GPS audit
+            </p>
+          </div>
+          <Users className="w-5 h-5 text-[#1e40af] shrink-0" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            <p className="text-[11px] text-slate-500">Registered</p>
+            <p className="text-lg font-bold text-slate-900 tabular-nums mt-0.5">
+              {roster.length}
+            </p>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            <p className="text-[11px] text-slate-500">On Duty</p>
+            <p className="text-lg font-bold text-emerald-700 tabular-nums mt-0.5">
+              {onDutyCount}
+            </p>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            <p className="text-[11px] text-slate-500">On Leave</p>
+            <p className="text-lg font-bold text-amber-700 tabular-nums mt-0.5">
+              {onLeaveCount}
+            </p>
+          </div>
+        </div>
+
+        {activeCities.length > 0 && (
+          <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1e40af]">
+              <Compass className="w-3.5 h-3.5 shrink-0" />
+              <span>Exact Cities Tracked</span>
+            </div>
+            <p className="text-xs text-slate-700 leading-relaxed">
+              {activeCities.map(([city, count], idx) => (
+                <React.Fragment key={city}>
+                  {idx > 0 && <span className="mx-1.5 text-slate-400" aria-hidden="true">·</span>}
+                  <span>
+                    {city}{' '}
+                    <strong className="font-semibold text-slate-900 tabular-nums">
+                      ({count})
+                    </strong>
+                  </span>
+                </React.Fragment>
+              ))}
+            </p>
+          </div>
+        )}
+
+        {/* Live Interactive Workforce Map */}
+        {mapMarkers.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700">Live Traced Field Map</span>
+              <span className="text-[11px] text-slate-500">Tap any pin for exact details</span>
+            </div>
+            <LocationTraceMap markers={mapMarkers} heightClass="h-56" />
+          </div>
+        )}
+
+        <button
+          type="button"
+          disabled={roster.length === 0}
+          onClick={() => exportAttendanceCsv(data)}
+          className="w-full min-h-[46px] px-4 py-2.5 rounded-xl bg-[#1e40af] hover:bg-[#2563eb] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+        >
+          <Download className="w-4 h-4" />
+          <span>Export Attendance Report (CSV)</span>
+        </button>
+      </section>
+
+      {/* Geography & Status Filter */}
+      {roster.length > 0 && (
+        <section className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl">
+            {(
+              [
+                { id: 'all', label: 'All' },
+                { id: 'On Duty', label: 'On Duty' },
+                { id: 'Checked Out', label: 'Out' },
+                { id: 'On Leave', label: 'Leave' },
+              ] as { id: StatusFilter; label: string }[]
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={`min-h-[38px] px-1.5 py-1 text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
+                  statusFilter === tab.id
+                    ? 'bg-white text-[#1e40af] shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="search"
+              value={geoQuery}
+              onChange={(e) => setGeoQuery(e.target.value)}
+              placeholder="Monitor by city, shop/home, GPS area, name, or ID..."
+              className="w-full min-h-[42px] pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Employee Roster */}
+      {filteredRoster.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+          <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-slate-800">
+            {roster.length === 0 ? 'No Registered Employees' : 'No Matching Employees'}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            {roster.length === 0
+              ? 'Employees who onboard with @vantrexchemicals.com emails appear here automatically.'
+              : 'Adjust your status tab or geographic search filter.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredRoster.map(
+            ({
+              emp,
+              status,
+              workMode,
+              uniqueDaysWorked,
+              leavesTaken,
+              latestShift,
+              latestLocation,
+              latestLocationLabel,
+              latestTimestamp,
+            }) => (
+              <article
+                key={emp.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-slate-900 truncate">
+                      {emp.fullName}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      <span className="font-mono-tabular font-medium text-slate-700">
+                        {emp.employeeId}
+                      </span>
+                      <span className="mx-1.5" aria-hidden="true">·</span>
+                      <span>{emp.department}</span>
+                      {workMode && (
+                        <>
+                          <span className="mx-1.5" aria-hidden="true">·</span>
+                          <span>{workMode}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`flex items-center gap-1 text-xs font-semibold shrink-0 ${
+                      status === 'On Duty'
+                        ? 'text-emerald-700'
+                        : status === 'On Leave'
+                        ? 'text-amber-700'
+                        : 'text-slate-600'
+                    }`}
+                  >
+                    {status === 'On Duty' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : status === 'On Leave' ? (
+                      <CalendarOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Clock className="w-3.5 h-3.5" />
+                    )}
+                    <span>{status}</span>
+                  </div>
+                </div>
+
+                {/* Contact Row: Corporate Email & Mobile Number */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                  <a
+                    href={`mailto:${emp.email}`}
+                    className="inline-flex items-center gap-1.5 text-slate-600 hover:text-[#1e40af] truncate max-w-full"
+                  >
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate">{emp.email}</span>
+                  </a>
+                  {emp.mobileNumber && (
+                    <a
+                      href={`tel:${emp.mobileNumber.replace(/\s+/g, '')}`}
+                      className="inline-flex items-center gap-1.5 font-mono-tabular text-slate-700 hover:text-[#1e40af]"
+                    >
+                      <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                      <span>{emp.mobileNumber}</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                  <span>
+                    Days Worked:{' '}
+                    <strong className="font-bold text-slate-900 tabular-nums">
+                      {uniqueDaysWorked}
+                    </strong>
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    Leaves Taken:{' '}
+                    <strong className="font-bold text-slate-900 tabular-nums">
+                      {leavesTaken}
+                    </strong>
+                  </span>
+                </div>
+
+                {latestLocation ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5">
+                        {renderPlaceIcon(latestLocation.placeCategory)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-[#1e40af]">
+                          {[
+                            latestLocation.placeCategory || 'Field Location',
+                            latestLocation.city,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                        <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                          {latestLocationLabel}
+                          {latestTimestamp
+                            ? ` · ${new Date(latestTimestamp).toLocaleString([], {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}`
+                            : ''}
+                        </p>
+                        <p className="text-xs font-medium text-slate-800 leading-snug mt-0.5">
+                          {latestLocation.address}
+                        </p>
+                        <p className="text-[11px] font-mono-tabular text-slate-500 mt-0.5">
+                          {latestLocation.lat.toFixed(5)}, {latestLocation.lng.toFixed(5)}
+                          {latestLocation.accuracy !== null && ` · ±${latestLocation.accuracy}m`}
+                          {latestLocation.simulated ? ' · Demo GPS' : ' · Verified GPS'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-1 border-t border-slate-200/70">
+                      {latestShift && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTracedShift({ name: emp.fullName, log: latestShift })
+                          }
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-800 hover:text-[#1e40af] py-1"
+                        >
+                          <MapIcon className="w-3.5 h-3.5" />
+                          <span>Trace on Map</span>
+                        </button>
+                      )}
+                      <a
+                        href={buildGoogleMapsUrl(latestLocation.lat, latestLocation.lng)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e40af] hover:underline py-1"
+                      >
+                        <span>View on Google Maps</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    No GPS check-in recorded yet.
+                  </p>
+                )}
+              </article>
+            )
+          )}
+        </div>
+      )}
+
+      <LocationMapModal
+        isOpen={Boolean(tracedShift)}
+        title={tracedShift ? `${tracedShift.name} — Location Trace` : 'Location Trace'}
+        entryLocation={tracedShift?.log.punchInLocation || null}
+        exitLocation={tracedShift?.log.punchOutLocation || null}
+        onClose={() => setTracedShift(null)}
+      />
+    </div>
+  );
+}

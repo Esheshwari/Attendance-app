@@ -1,0 +1,6 @@
+{
+  "name": "Vantrex Chemicals — Corporate Attendance Portal",
+  "description": "Mobile-first corporate employee attendance, real-time GPS verification, shift tracking, and HR leave management portal for Vantrex Chemicals.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
