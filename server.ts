@@ -8,6 +8,7 @@ import attendanceHandler from './api/attendance.ts';
 import leavesHandler from './api/leaves.ts';
 import teamHandler from './api/team.ts';
 import resetHandler from './api/reset.ts';
+import exportHandler from './api/export.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,7 @@ app.all('/api/attendance', (req, res) => attendanceHandler(req as any, res as an
 app.all('/api/leaves', (req, res) => leavesHandler(req as any, res as any));
 app.all('/api/team', (req, res) => teamHandler(req as any, res as any));
 app.all('/api/reset', (req, res) => resetHandler(req as any, res as any));
+app.all('/api/export', (req, res) => exportHandler(req as any, res as any));
 
 async function start() {
   if (process.env.NODE_ENV !== 'production') {

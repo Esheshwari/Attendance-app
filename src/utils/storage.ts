@@ -18,7 +18,12 @@ const KEYS = {
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
-let backendProbePromise: Promise<boolean> | null = null;
+let backendConfirmed = false;
+let activeProbe: Promise<boolean> | null = null;
+
+export function getApiBaseUrl(): string {
+  return API_BASE;
+}
 
 export function getDomainError(email: string): string | null {
   const trimmed = email.trim();
@@ -45,12 +50,13 @@ export function getMobileNumberError(phone: string): string | null {
 }
 
 export async function isNeonBackendAvailable(): Promise<boolean> {
-  if (backendProbePromise) return backendProbePromise;
+  if (backendConfirmed) return true;
+  if (activeProbe) return activeProbe;
 
-  backendProbePromise = (async () => {
+  activeProbe = (async () => {
     try {
       const controller = new AbortController();
-      const timer = window.setTimeout(() => controller.abort(), 3500);
+      const timer = window.setTimeout(() => controller.abort(), 8000);
       const res = await fetch(`${API_BASE}/api/health`, {
         signal: controller.signal,
         headers: { Accept: 'application/json' },
@@ -61,13 +67,17 @@ export async function isNeonBackendAvailable(): Promise<boolean> {
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) return false;
       const data = await res.json();
-      return Boolean(data?.ok && data?.database === 'neon');
+      const ok = Boolean(data?.ok && data?.database === 'neon');
+      if (ok) backendConfirmed = true;
+      return ok;
     } catch {
       return false;
+    } finally {
+      activeProbe = null;
     }
   })();
 
-  return backendProbePromise;
+  return activeProbe;
 }
 
 function readLocal<T>(key: string, fallback: T): T {

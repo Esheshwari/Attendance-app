@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import {
   CalendarOff,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
   Compass,
+  Copy,
   Download,
   ExternalLink,
   Mail,
@@ -16,7 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { AttendanceLog, LiveEmployeeStatus, TeamOverviewData } from '../types';
-import { exportAttendanceCsv } from '../utils/csv';
+import { exportAttendanceCsv, type CsvExportResult } from '../utils/csv';
 import { buildGoogleMapsUrl } from '../utils/gps';
 import { renderPlaceIcon } from './DashboardTab';
 import { LocationMapModal } from './LocationMapModal';
@@ -44,6 +46,9 @@ export function TeamHrTab({ data, onRefresh }: TeamHrTabProps) {
   const [geoQuery, setGeoQuery] = useState('');
   const [expandedEmpId, setExpandedEmpId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<CsvExportResult | null>(null);
+  const [copiedCsv, setCopiedCsv] = useState(false);
   const [tracedShift, setTracedShift] = useState<{
     name: string;
     log: AttendanceLog;
@@ -209,6 +214,44 @@ export function TeamHrTab({ data, onRefresh }: TeamHrTabProps) {
     }
   };
 
+  const handleExportCsv = async () => {
+    setExporting(true);
+    setCopiedCsv(false);
+    try {
+      const result = await exportAttendanceCsv(data);
+      setExportResult(result);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleCopyCsv = async () => {
+    if (!exportResult?.csvContent) return;
+    try {
+      await navigator.clipboard.writeText(exportResult.csvContent);
+      setCopiedCsv(true);
+      return;
+    } catch {
+      // Fallback for restricted WebViews/iframes
+    }
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = exportResult.csvContent;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (copied) {
+        setCopiedCsv(true);
+      }
+    } catch {
+      // Clipboard unavailable
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* HR Summary & Export Action */}
@@ -287,13 +330,47 @@ export function TeamHrTab({ data, onRefresh }: TeamHrTabProps) {
 
         <button
           type="button"
-          disabled={roster.length === 0}
-          onClick={() => exportAttendanceCsv(data)}
+          disabled={(roster.length === 0 && data.attendance.length === 0) || exporting}
+          onClick={handleExportCsv}
           className="w-full min-h-[46px] px-4 py-2.5 rounded-xl bg-[#1e40af] hover:bg-[#2563eb] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors disabled:opacity-50"
         >
           <Download className="w-4 h-4" />
-          <span>Export Attendance Report (CSV)</span>
+          <span>{exporting ? 'Preparing CSV...' : 'Export Attendance Report (CSV)'}</span>
         </button>
+
+        {exportResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs space-y-2 ${
+              exportResult.ok
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}
+          >
+            <p className="font-medium leading-snug">{exportResult.message}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCopyCsv}
+                className="inline-flex items-center gap-1.5 font-semibold text-slate-800 hover:text-[#1e40af] underline"
+              >
+                {copiedCsv ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedCsv ? 'CSV Copied' : 'Copy CSV Text'}</span>
+              </button>
+              {exportResult.serverDownloadUrl && (
+                <a
+                  href={exportResult.serverDownloadUrl}
+                  download={exportResult.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-[#1e40af] underline"
+                >
+                  <span>Direct Server Download</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Admin View Mode + Filter */}
