@@ -11675,6 +11675,26 @@ var Calendar = createLucideIcon("calendar", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var ChevronDown = createLucideIcon("chevron-down", [["path", {
+	d: "m6 9 6 6 6-6",
+	key: "qrunsl"
+}]]);
+/**
+* @license lucide-react v0.546.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var ChevronUp = createLucideIcon("chevron-up", [["path", {
+	d: "m18 15-6-6-6 6",
+	key: "153udz"
+}]]);
+/**
+* @license lucide-react v0.546.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var CircleAlert = createLucideIcon("circle-alert", [
 	["circle", {
 		cx: "12",
@@ -12018,6 +12038,30 @@ var Phone = createLucideIcon("phone", [["path", {
 	d: "M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384",
 	key: "9njp5v"
 }]]);
+/**
+* @license lucide-react v0.546.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var RefreshCw = createLucideIcon("refresh-cw", [
+	["path", {
+		d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8",
+		key: "v9h5vc"
+	}],
+	["path", {
+		d: "M21 3v5h-5",
+		key: "1q7to0"
+	}],
+	["path", {
+		d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16",
+		key: "3uifl3"
+	}],
+	["path", {
+		d: "M8 16H3v5",
+		key: "1cv678"
+	}]
+]);
 /**
 * @license lucide-react v0.546.0 - ISC
 *
@@ -13523,7 +13567,7 @@ var __vitePreload = function preload(baseModule, deps, importerUrl) {
 	});
 };
 // node_modules/@capacitor/geolocation/dist/esm/index.js
-var Geolocation = registerPlugin("Geolocation", { web: () => __vitePreload(() => import("./web-DWARStiM.js").then((m) => new m.GeolocationWeb()), []) });
+var Geolocation = registerPlugin("Geolocation", { web: () => __vitePreload(() => import("./web-BK5xKutj.js").then((m) => new m.GeolocationWeb()), []) });
 f();
 // src/utils/gps.ts
 function buildGoogleMapsUrl(lat, lng) {
@@ -21278,7 +21322,7 @@ function LeaveModal({ isOpen, onClose, onSubmit }) {
 	});
 }
 // src/components/LogsTab.tsx
-function formatHours(minutes) {
+function formatHours$1(minutes) {
 	if (minutes === null) return "In Progress";
 	const hrs = Math.floor(minutes / 60);
 	const mins = minutes % 60;
@@ -21419,7 +21463,7 @@ function LogsTab({ attendance, leaves }) {
 								]
 							})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 								className: "text-xs font-bold font-mono-tabular text-[#1e40af] shrink-0",
-								children: formatHours(log.totalMinutes)
+								children: formatHours$1(log.totalMinutes)
 							})]
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "pt-2.5 border-t border-slate-100 space-y-2.5",
@@ -21799,15 +21843,27 @@ function exportAttendanceCsv(data) {
 	window.setTimeout(() => URL.revokeObjectURL(url), 1e3);
 }
 // src/components/TeamHrTab.tsx
-function TeamHrTab({ data }) {
+function formatHours(minutes) {
+	if (minutes === null) return "In Progress";
+	const hrs = Math.floor(minutes / 60);
+	const mins = minutes % 60;
+	return `${hrs}h ${String(mins).padStart(2, "0")}m`;
+}
+function TeamHrTab({ data, onRefresh }) {
 	const todayIso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+	const [viewMode, setViewMode] = (0, import_react.useState)("roster");
 	const [statusFilter, setStatusFilter] = (0, import_react.useState)("all");
 	const [geoQuery, setGeoQuery] = (0, import_react.useState)("");
+	const [expandedEmpId, setExpandedEmpId] = (0, import_react.useState)(null);
+	const [refreshing, setRefreshing] = (0, import_react.useState)(false);
 	const [tracedShift, setTracedShift] = (0, import_react.useState)(null);
+	const empByEmail = (0, import_react.useMemo)(() => {
+		return new Map(data.employees.map((e) => [e.email.toLowerCase(), e]));
+	}, [data.employees]);
 	const roster = (0, import_react.useMemo)(() => {
 		return data.employees.map((emp) => {
 			const email = emp.email.toLowerCase();
-			const empLogs = data.attendance.filter((a) => a.employeeEmail.toLowerCase() === email);
+			const empLogs = data.attendance.filter((a) => a.employeeEmail.toLowerCase() === email).sort((a, b) => new Date(b.punchInAt).getTime() - new Date(a.punchInAt).getTime());
 			const empLeaves = data.leaves.filter((l) => l.employeeEmail.toLowerCase() === email);
 			const activeShift = empLogs.find((a) => !a.punchOutAt) || null;
 			const latestShift = empLogs[0] || null;
@@ -21822,6 +21878,7 @@ function TeamHrTab({ data }) {
 			const latestTimestamp = activeShift ? activeShift.punchInAt : latestShift?.punchOutAt || latestShift?.punchInAt || null;
 			return {
 				emp,
+				empLogs,
 				status,
 				workMode: activeShift?.workMode || latestShift?.workMode || null,
 				uniqueDaysWorked,
@@ -21862,6 +21919,30 @@ function TeamHrTab({ data }) {
 		statusFilter,
 		geoQuery
 	]);
+	const filteredAllPunches = (0, import_react.useMemo)(() => {
+		const q = geoQuery.trim().toLowerCase();
+		return data.attendance.slice().sort((a, b) => new Date(b.punchInAt).getTime() - new Date(a.punchInAt).getTime()).filter((log) => {
+			if (!q) return true;
+			const emp = empByEmail.get(log.employeeEmail.toLowerCase());
+			return [
+				emp?.fullName || "",
+				emp?.employeeId || "",
+				log.employeeEmail,
+				emp?.mobileNumber || "",
+				emp?.department || "",
+				log.workMode,
+				log.punchInLocation.city || "",
+				log.punchInLocation.placeCategory || "",
+				log.punchInLocation.address,
+				log.punchOutLocation?.city || "",
+				log.punchOutLocation?.address || ""
+			].join(" ").toLowerCase().includes(q);
+		});
+	}, [
+		data.attendance,
+		empByEmail,
+		geoQuery
+	]);
 	const mapMarkers = (0, import_react.useMemo)(() => {
 		return filteredRoster.filter((item) => Boolean(item.latestLocation)).map((item) => {
 			const loc = item.latestLocation;
@@ -21880,6 +21961,14 @@ function TeamHrTab({ data }) {
 	}, [filteredRoster]);
 	const onDutyCount = roster.filter((r) => r.status === "On Duty").length;
 	const onLeaveCount = roster.filter((r) => r.status === "On Leave").length;
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await onRefresh();
+		} finally {
+			setRefreshing(false);
+		}
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-4",
 		children: [
@@ -21888,13 +21977,23 @@ function TeamHrTab({ data }) {
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "flex items-center justify-between gap-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "text-sm font-bold text-slate-900",
-							children: "Team & HR Geography Monitor"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-xs text-slate-500 mt-0.5",
-							children: "Live workforce status, exact city, shop/home trace & GPS audit"
-						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-5 h-5 text-[#1e40af] shrink-0" })]
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "min-w-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "text-sm font-bold text-slate-900",
+								children: "Team & HR Geography Monitor"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-slate-500 mt-0.5",
+								children: "Live workforce status, punch logs, city & shop/home audit"
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: handleRefresh,
+							disabled: refreshing,
+							"aria-label": "Refresh team data",
+							className: "min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-[#1e40af] hover:bg-blue-50 transition-colors shrink-0 disabled:opacity-50",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: `w-4 h-4 ${refreshing ? "animate-spin" : ""}` })
+						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "grid grid-cols-3 gap-2",
@@ -21981,45 +22080,70 @@ function TeamHrTab({ data }) {
 					})
 				]
 			}),
-			roster.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 				className: "bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm space-y-2.5",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl",
-					children: [
-						{
-							id: "all",
-							label: "All"
-						},
-						{
-							id: "On Duty",
-							label: "On Duty"
-						},
-						{
-							id: "Checked Out",
-							label: "Out"
-						},
-						{
-							id: "On Leave",
-							label: "Leave"
-						}
-					].map((tab) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: () => setStatusFilter(tab.id),
-						className: `min-h-[38px] px-1.5 py-1 text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${statusFilter === tab.id ? "bg-white text-[#1e40af] shadow-sm" : "text-slate-600 hover:text-slate-900"}`,
-						children: tab.label
-					}, tab.id))
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "relative",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, { className: "w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-						type: "search",
-						value: geoQuery,
-						onChange: (e) => setGeoQuery(e.target.value),
-						placeholder: "Monitor by city, shop/home, GPS area, name, or ID...",
-						className: "w-full min-h-[42px] pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
-					})]
-				})]
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => setViewMode("roster"),
+							className: `min-h-[40px] px-2 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${viewMode === "roster" ? "bg-white text-[#1e40af] shadow-sm" : "text-slate-600 hover:text-slate-900"}`,
+							children: [
+								"Employee Roster (",
+								roster.length,
+								")"
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => setViewMode("punches"),
+							className: `min-h-[40px] px-2 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${viewMode === "punches" ? "bg-white text-[#1e40af] shadow-sm" : "text-slate-600 hover:text-slate-900"}`,
+							children: [
+								"All Punch Logs (",
+								data.attendance.length,
+								")"
+							]
+						})]
+					}),
+					viewMode === "roster" && roster.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl",
+						children: [
+							{
+								id: "all",
+								label: "All"
+							},
+							{
+								id: "On Duty",
+								label: "On Duty"
+							},
+							{
+								id: "Checked Out",
+								label: "Out"
+							},
+							{
+								id: "On Leave",
+								label: "Leave"
+							}
+						].map((tab) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => setStatusFilter(tab.id),
+							className: `min-h-[38px] px-1.5 py-1 text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${statusFilter === tab.id ? "bg-white text-[#1e40af] shadow-sm" : "text-slate-600 hover:text-slate-900"}`,
+							children: tab.label
+						}, tab.id))
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "relative",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, { className: "w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "search",
+							value: geoQuery,
+							onChange: (e) => setGeoQuery(e.target.value),
+							placeholder: "Search by employee, ID, city, shop/home, or address...",
+							className: "w-full min-h-[42px] pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
+						})]
+					})
+				]
 			}),
-			filteredRoster.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			viewMode === "roster" ? filteredRoster.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-8 h-8 text-slate-300 mx-auto mb-2" }),
@@ -22034,144 +22158,351 @@ function TeamHrTab({ data }) {
 				]
 			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "space-y-3",
-				children: filteredRoster.map(({ emp, status, workMode, uniqueDaysWorked, leavesTaken, latestShift, latestLocation, latestLocationLabel, latestTimestamp }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-					className: "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-start justify-between gap-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "min-w-0",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-									className: "text-sm font-bold text-slate-900 truncate",
-									children: emp.fullName
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-									className: "text-xs text-slate-500 mt-0.5 truncate",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "font-mono-tabular font-medium text-slate-700",
-											children: emp.employeeId
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "mx-1.5",
-											"aria-hidden": "true",
-											children: "·"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: emp.department }),
-										workMode && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "mx-1.5",
-											"aria-hidden": "true",
-											children: "·"
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: workMode })] })
-									]
-								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: `flex items-center gap-1 text-xs font-semibold shrink-0 ${status === "On Duty" ? "text-emerald-700" : status === "On Leave" ? "text-amber-700" : "text-slate-600"}`,
-								children: [status === "On Duty" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "w-3.5 h-3.5" }) : status === "On Leave" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CalendarOff, { className: "w-3.5 h-3.5" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-3.5 h-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: status })]
-							})]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-								href: `mailto:${emp.email}`,
-								className: "inline-flex items-center gap-1.5 text-slate-600 hover:text-[#1e40af] truncate max-w-full",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mail, { className: "w-3.5 h-3.5 shrink-0 text-slate-400" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "truncate",
-									children: emp.email
-								})]
-							}), emp.mobileNumber && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-								href: `tel:${emp.mobileNumber.replace(/\s+/g, "")}`,
-								className: "inline-flex items-center gap-1.5 font-mono-tabular text-slate-700 hover:text-[#1e40af]",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Phone, { className: "w-3.5 h-3.5 shrink-0 text-slate-400" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: emp.mobileNumber })]
-							})]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-4 text-xs text-slate-600 pt-2 border-t border-slate-100",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
-									"Days Worked:",
-									" ",
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
-										className: "font-bold text-slate-900 tabular-nums",
-										children: uniqueDaysWorked
-									})
-								] }),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"aria-hidden": "true",
-									children: "·"
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
-									"Leaves Taken:",
-									" ",
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
-										className: "font-bold text-slate-900 tabular-nums",
-										children: leavesTaken
-									})
-								] })
-							]
-						}),
-						latestLocation ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-start gap-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "mt-0.5",
-									children: renderPlaceIcon(latestLocation.placeCategory)
+				children: filteredRoster.map(({ emp, empLogs, status, workMode, uniqueDaysWorked, leavesTaken, latestShift, latestLocation, latestLocationLabel, latestTimestamp }) => {
+					const isExpanded = expandedEmpId === emp.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+						className: "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-start justify-between gap-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "min-w-0",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+										className: "text-sm font-bold text-slate-900 truncate",
+										children: emp.fullName
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "text-xs text-slate-500 mt-0.5 truncate",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "font-mono-tabular font-medium text-slate-700",
+												children: emp.employeeId
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "mx-1.5",
+												"aria-hidden": "true",
+												children: "·"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: emp.department }),
+											workMode && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "mx-1.5",
+												"aria-hidden": "true",
+												children: "·"
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: workMode })] })
+										]
+									})]
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "min-w-0 flex-1",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-[11px] font-bold text-[#1e40af]",
-											children: [latestLocation.placeCategory || "Field Location", latestLocation.city].filter(Boolean).join(" · ")
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-											className: "text-[11px] font-medium text-slate-500 mt-0.5",
-											children: [latestLocationLabel, latestTimestamp ? ` · ${new Date(latestTimestamp).toLocaleString([], {
-												month: "short",
-												day: "numeric",
-												hour: "2-digit",
-												minute: "2-digit"
-											})}` : ""]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-xs font-medium text-slate-800 leading-snug mt-0.5",
-											children: latestLocation.address
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-											className: "text-[11px] font-mono-tabular text-slate-500 mt-0.5",
-											children: [
-												latestLocation.lat.toFixed(5),
-												", ",
-												latestLocation.lng.toFixed(5),
-												latestLocation.accuracy !== null && ` · ±${latestLocation.accuracy}m`,
-												latestLocation.simulated ? " · Demo GPS" : " · Verified GPS"
-											]
+									className: `flex items-center gap-1 text-xs font-semibold shrink-0 ${status === "On Duty" ? "text-emerald-700" : status === "On Leave" ? "text-amber-700" : "text-slate-600"}`,
+									children: [status === "On Duty" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "w-3.5 h-3.5" }) : status === "On Leave" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CalendarOff, { className: "w-3.5 h-3.5" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-3.5 h-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: status })]
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+									href: `mailto:${emp.email}`,
+									className: "inline-flex items-center gap-1.5 text-slate-600 hover:text-[#1e40af] truncate max-w-full",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mail, { className: "w-3.5 h-3.5 shrink-0 text-slate-400" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "truncate",
+										children: emp.email
+									})]
+								}), emp.mobileNumber && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+									href: `tel:${emp.mobileNumber.replace(/\s+/g, "")}`,
+									className: "inline-flex items-center gap-1.5 font-mono-tabular text-slate-700 hover:text-[#1e40af]",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Phone, { className: "w-3.5 h-3.5 shrink-0 text-slate-400" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: emp.mobileNumber })]
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-center gap-4 text-xs text-slate-600 pt-2 border-t border-slate-100",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+										"Days Worked:",
+										" ",
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+											className: "font-bold text-slate-900 tabular-nums",
+											children: uniqueDaysWorked
 										})
-									]
-								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-center gap-4 pt-1 border-t border-slate-200/70",
-								children: [latestShift && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-									type: "button",
-									onClick: () => setTracedShift({
-										name: emp.fullName,
-										log: latestShift
+									] }),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": "true",
+										children: "·"
 									}),
-									className: "inline-flex items-center gap-1 text-[11px] font-semibold text-slate-800 hover:text-[#1e40af] py-1",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, { className: "w-3.5 h-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Trace on Map" })]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-									href: buildGoogleMapsUrl(latestLocation.lat, latestLocation.lng),
-									target: "_blank",
-									rel: "noopener noreferrer",
-									className: "inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e40af] hover:underline py-1",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View on Google Maps" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExternalLink, { className: "w-3 h-3" })]
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+										"Leaves Taken:",
+										" ",
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+											className: "font-bold text-slate-900 tabular-nums",
+											children: leavesTaken
+										})
+									] })
+								]
+							}),
+							latestLocation ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-start gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-0.5",
+										children: renderPlaceIcon(latestLocation.placeCategory)
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "min-w-0 flex-1",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-[11px] font-bold text-[#1e40af]",
+												children: [latestLocation.placeCategory || "Field Location", latestLocation.city].filter(Boolean).join(" · ")
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+												className: "text-[11px] font-medium text-slate-500 mt-0.5",
+												children: [latestLocationLabel, latestTimestamp ? ` · ${new Date(latestTimestamp).toLocaleString([], {
+													month: "short",
+													day: "numeric",
+													hour: "2-digit",
+													minute: "2-digit"
+												})}` : ""]
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs font-medium text-slate-800 leading-snug mt-0.5",
+												children: latestLocation.address
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+												className: "text-[11px] font-mono-tabular text-slate-500 mt-0.5",
+												children: [
+													latestLocation.lat.toFixed(5),
+													", ",
+													latestLocation.lng.toFixed(5),
+													latestLocation.accuracy !== null && ` · ±${latestLocation.accuracy}m`,
+													latestLocation.simulated ? " · Demo GPS" : " · Verified GPS"
+												]
+											})
+										]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 border-t border-slate-200/70",
+									children: [latestShift && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+										type: "button",
+										onClick: () => setTracedShift({
+											name: emp.fullName,
+											log: latestShift
+										}),
+										className: "inline-flex items-center gap-1 text-[11px] font-semibold text-slate-800 hover:text-[#1e40af] py-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, { className: "w-3.5 h-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Trace on Map" })]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+										href: buildGoogleMapsUrl(latestLocation.lat, latestLocation.lng),
+										target: "_blank",
+										rel: "noopener noreferrer",
+										className: "inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e40af] hover:underline py-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View on Google Maps" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExternalLink, { className: "w-3 h-3" })]
+									})]
 								})]
-							})]
-						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-xs text-slate-400 italic",
-							children: "No GPS check-in recorded yet."
-						})
-					]
-				}, emp.id))
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-slate-400 italic",
+								children: "No GPS check-in recorded yet."
+							}),
+							empLogs.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "pt-1",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => setExpandedEmpId(isExpanded ? null : emp.id),
+									className: "w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-[#1e40af] flex items-center justify-between transition-colors",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+										"Punch History (",
+										empLogs.length,
+										")"
+									] }), isExpanded ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronUp, { className: "w-4 h-4" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, { className: "w-4 h-4" })]
+								}), isExpanded && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-2.5 space-y-2 border-t border-slate-100 pt-2.5",
+									children: empLogs.map((log) => {
+										const inDt = new Date(log.punchInAt);
+										const outDt = log.punchOutAt ? new Date(log.punchOutAt) : null;
+										return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "flex items-center justify-between text-xs",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+														className: "font-semibold text-slate-900",
+														children: [
+															inDt.toLocaleDateString("en-US", {
+																month: "short",
+																day: "numeric"
+															}),
+															" ",
+															"· ",
+															log.workMode
+														]
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+														className: "font-mono-tabular font-bold text-[#1e40af]",
+														children: formatHours(log.totalMinutes)
+													})]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+													className: "text-[11px] font-mono-tabular text-slate-600",
+													children: [
+														"In:",
+														" ",
+														inDt.toLocaleTimeString([], {
+															hour: "2-digit",
+															minute: "2-digit"
+														}),
+														" ",
+														"→ Out:",
+														" ",
+														outDt ? outDt.toLocaleTimeString([], {
+															hour: "2-digit",
+															minute: "2-digit"
+														}) : "Active"
+													]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+													className: "text-[11px] text-slate-700",
+													children: [
+														[log.punchInLocation.placeCategory, log.punchInLocation.city].filter(Boolean).join(" · "),
+														" ",
+														"— ",
+														log.punchInLocation.address
+													]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "flex items-center gap-3 pt-1",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+														type: "button",
+														onClick: () => setTracedShift({
+															name: emp.fullName,
+															log
+														}),
+														className: "text-[11px] font-semibold text-slate-800 hover:text-[#1e40af] inline-flex items-center gap-1",
+														children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, { className: "w-3 h-3" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Trace Map" })]
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+														href: buildGoogleMapsUrl(log.punchInLocation.lat, log.punchInLocation.lng),
+														target: "_blank",
+														rel: "noopener noreferrer",
+														className: "text-[11px] font-semibold text-[#1e40af] hover:underline inline-flex items-center gap-1",
+														children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Google Maps" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExternalLink, { className: "w-3 h-3" })]
+													})]
+												})
+											]
+										}, log.id);
+									})
+								})]
+							})
+						]
+					}, emp.id);
+				})
+			}) : filteredAllPunches.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-8 h-8 text-slate-300 mx-auto mb-2" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-sm font-semibold text-slate-800",
+						children: "No Punch Logs Found"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-xs text-slate-500 mt-1",
+						children: "Employee Punch In and Punch Out sessions will appear here in real time."
+					})
+				]
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "space-y-3",
+				children: filteredAllPunches.map((log) => {
+					const emp = empByEmail.get(log.employeeEmail.toLowerCase());
+					const inDt = new Date(log.punchInAt);
+					const outDt = log.punchOutAt ? new Date(log.punchOutAt) : null;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+						className: "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2.5",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-start justify-between gap-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "min-w-0",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+										className: "text-sm font-bold text-slate-900 truncate",
+										children: emp?.fullName || log.employeeEmail
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "text-xs text-slate-500 truncate",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "font-mono-tabular font-medium text-slate-700",
+												children: emp?.employeeId || "ID"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "mx-1.5",
+												"aria-hidden": "true",
+												children: "·"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: log.workMode })
+										]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-xs font-bold font-mono-tabular text-[#1e40af] shrink-0",
+									children: formatHours(log.totalMinutes)
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "text-xs font-mono-tabular text-slate-600",
+								children: [
+									inDt.toLocaleDateString("en-US", {
+										month: "short",
+										day: "numeric",
+										year: "numeric"
+									}),
+									" ",
+									"·",
+									" ",
+									inDt.toLocaleTimeString([], {
+										hour: "2-digit",
+										minute: "2-digit"
+									}),
+									" → ",
+									outDt ? outDt.toLocaleTimeString([], {
+										hour: "2-digit",
+										minute: "2-digit"
+									}) : "Active"
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-start gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-0.5",
+										children: renderPlaceIcon(log.punchInLocation.placeCategory)
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "min-w-0 flex-1",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-[11px] font-bold text-[#1e40af]",
+												children: [log.punchInLocation.placeCategory, log.punchInLocation.city].filter(Boolean).join(" · ")
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+												className: "text-xs text-slate-800 leading-snug",
+												children: ["In: ", log.punchInLocation.address]
+											}),
+											log.punchOutLocation && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+												className: "text-xs text-slate-600 leading-snug mt-0.5",
+												children: ["Out: ", log.punchOutLocation.address]
+											})
+										]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-4 pt-1 border-t border-slate-200/70",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+										type: "button",
+										onClick: () => setTracedShift({
+											name: emp?.fullName || log.employeeEmail,
+											log
+										}),
+										className: "inline-flex items-center gap-1 text-[11px] font-semibold text-slate-800 hover:text-[#1e40af] py-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, { className: "w-3.5 h-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Trace on Map" })]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+										href: buildGoogleMapsUrl(log.punchInLocation.lat, log.punchInLocation.lng),
+										target: "_blank",
+										rel: "noopener noreferrer",
+										className: "inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e40af] hover:underline py-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View on Google Maps" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExternalLink, { className: "w-3 h-3" })]
+									})]
+								})]
+							})
+						]
+					}, log.id);
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LocationMapModal, {
 				isOpen: Boolean(tracedShift),
@@ -22324,7 +22655,13 @@ function App() {
 							attendance,
 							leaves
 						}),
-						activeTab === "team" && isManager && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TeamHrTab, { data: teamData })
+						activeTab === "team" && isManager && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TeamHrTab, {
+							data: teamData,
+							onRefresh: async () => {
+								const overview = await fetchTeamOverview();
+								setTeamData(overview);
+							}
+						})
 					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("nav", {

@@ -191,7 +191,13 @@ export default function App() {
               )}
 
               {activeTab === 'team' && isManager && (
-                <TeamHrTab data={teamData} />
+                <TeamHrTab
+                  data={teamData}
+                  onRefresh={async () => {
+                    const overview = await fetchTeamOverview();
+                    setTeamData(overview);
+                  }}
+                />
               )}
             </main>
 
